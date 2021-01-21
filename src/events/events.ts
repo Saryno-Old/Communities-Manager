@@ -14,8 +14,9 @@ export const Events =
     : null;
 
 export enum EventType {
-  COMMUNITY_JOIN = 1,
-  COMMUNITY_LEAVE = 2,
+  COMMUNITY_CREATE = 1,
+  COMMUNITY_DELETE = 2,
+  COMMUNITY_UPDATE = 2,
 }
 
 export const makeEvent = (type: EventType, data: any) => {

@@ -9,6 +9,8 @@ import { CreateCommunityValidator } from '../validators/create-community.validat
 
 import { PatchCommunityValidator } from '../validators/patch-community.validator';
 import Joi from 'joi';
+import { EventType, sendEvent } from '../events/events';
+
 
 const CommunitiesRouter = new Router({
   prefix: '/communities',
@@ -83,30 +85,29 @@ CommunitiesRouter.post('create_community', '/', async ctx => {
     ...communityObj,
   })
     .save()
-    .catch(() => {
-      ctx.throw(500);
-      return null;
-    });
+    .catch(() => ctx.throw(500));
 
   ctx.response.status = 201;
   ctx.body = community.json();
+  setImmediate(async () => {
+    sendEvent(EventType.COMMUNITY_CREATE, {
+      id: community.id,
+      name: community.name,
+    });
+  });
 });
 
 CommunitiesRouter.patch('patch_community', '/:id', async ctx => {
-  console.log(ctx.params, ctx.body);
   const [{ id }, patch] = await Promise.all([
     FindCommunityByIdValidator.validateAsync(ctx.params),
     PatchCommunityValidator.validateAsync(ctx.request.body),
   ]).catch((err: Joi.ValidationError) => {
-ctx.throw(400, {
-  error: {
-    type: 'validation-error',
-    details: err.details,
-  },
-});
-return [null, null];
-
-
+    return ctx.throw(400, {
+      error: {
+        type: 'validation-error',
+        details: err.details,
+      },
+    });
   });
 
   const update = await Community.updateOne({ _id: id }, patch).exec();
@@ -120,6 +121,10 @@ return [null, null];
   }
 
   ctx.response.status = 202;
+setImmediate(async () => {
+  sendEvent(EventType.COMMUNITY_UPDATE, { id });
+});
+
 });
 
 export { CommunitiesRouter };
