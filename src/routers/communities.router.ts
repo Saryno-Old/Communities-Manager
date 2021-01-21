@@ -11,7 +11,6 @@ import { PatchCommunityValidator } from '../validators/patch-community.validator
 import Joi from 'joi';
 import { EventType, sendEvent } from '../events/events';
 
-
 const CommunitiesRouter = new Router({
   prefix: '/communities',
 });
@@ -121,10 +120,9 @@ CommunitiesRouter.patch('patch_community', '/:id', async ctx => {
   }
 
   ctx.response.status = 202;
-setImmediate(async () => {
-  sendEvent(EventType.COMMUNITY_UPDATE, { id });
-});
-
+  setImmediate(async () => {
+    sendEvent(EventType.COMMUNITY_UPDATE, { id });
+  });
 });
 
 export { CommunitiesRouter };
