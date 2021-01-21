@@ -11,6 +11,9 @@ import * as removeTrailingSlashes from 'koa-remove-trailing-slashes';
 import * as mongoose from 'mongoose';
 import { Logger } from './utils/logger';
 import stripAnsi = require('strip-ansi');
+import { isHttpError } from 'http-errors';
+
+
 
 const uri = process.env.MONGO_URI;
 
@@ -31,15 +34,21 @@ app.use(
   }),
 );
 
-app.use(koabody());
-
 app.use(async (ctx, next) => {
-  Logger.info(`${ctx.request.method} ${ctx.request.path}`, {
-    method: ctx.request.method,
-    path: ctx.request.path,
-  });
-  await next();
-});
+  try { 
+    await next();
+  } catch(e) {
+    if(isHttpError(e)) {
+      ctx.body = { error: e['error'] };
+      ctx.response.status = e.status;
+      return;
+    }
+
+    ctx.response.status = 500;
+  }
+})
+
+app.use(koabody());
 
 const BaseRouter = new Router();
 

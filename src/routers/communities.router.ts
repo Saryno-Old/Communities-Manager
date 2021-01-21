@@ -6,7 +6,7 @@ import {
 import { Snowflakes } from '../utils/snowflakes';
 import { ICommunity, Community } from '../models/community.model';
 import { CreateCommunityValidator } from '../validators/create-community.validator';
-import { MongoError } from 'mongodb';
+
 import { PatchCommunityValidator } from '../validators/patch-community.validator';
 import Joi from 'joi';
 
@@ -17,8 +17,13 @@ const CommunitiesRouter = new Router({
 CommunitiesRouter.get('query_communities', '/', async ctx => {
   const communityQuery = await QueryCommunitiesValidator.validateAsync(
     ctx.request.query,
-  ).catch(err => {
-    ctx.throw(400, err);
+  ).catch((err: Joi.ValidationError) => {
+    ctx.throw(400, {
+      error: {
+        type: 'validation-error',
+        details: err.details,
+      },
+    });
   });
 
   const query = {
@@ -43,8 +48,13 @@ CommunitiesRouter.get('query_communities', '/', async ctx => {
 CommunitiesRouter.get('get_community', '/:id', async ctx => {
   const communityQuery = await FindCommunityByIdValidator.validateAsync(
     ctx.params,
-  ).catch(err => {
-    ctx.throw(400, err);
+  ).catch((err: Joi.ValidationError) => {
+    ctx.throw(400, {
+      error: {
+        type: 'validation-error',
+        details: err.details,
+      },
+    });
   });
 
   const community = await Community.findById(communityQuery.id).exec();
@@ -59,8 +69,13 @@ CommunitiesRouter.get('get_community', '/:id', async ctx => {
 CommunitiesRouter.post('create_community', '/', async ctx => {
   const communityObj = await CreateCommunityValidator.validateAsync(
     ctx.request.body,
-  ).catch(err => {
-    ctx.throw(400, JSON.stringify(err));
+  ).catch((err: Joi.ValidationError) => {
+    ctx.throw(400, {
+      error: {
+        type: 'validation-error',
+        details: err.details,
+      },
+    });
   });
 
   const community = await new Community({
@@ -68,11 +83,8 @@ CommunitiesRouter.post('create_community', '/', async ctx => {
     ...communityObj,
   })
     .save()
-    .catch((err: MongoError) => {
-      if (err.name === 'MongoError' && err.code === 11000) {
-        ctx.throw(500, 'This should never happened...');
-      }
-      ctx.throw(500, { error: err.errmsg });
+    .catch(() => {
+      ctx.throw(500);
       return null;
     });
 
@@ -86,13 +98,16 @@ CommunitiesRouter.patch('patch_community', '/:id', async ctx => {
     FindCommunityByIdValidator.validateAsync(ctx.params),
     PatchCommunityValidator.validateAsync(ctx.request.body),
   ]).catch((err: Joi.ValidationError) => {
-    console.log(err);
-    ctx.body = err;
-    ctx.response.status = 500;
-    return [{ id: null }, null];
-  });
+ctx.throw(400, {
+  error: {
+    type: 'validation-error',
+    details: err.details,
+  },
+});
+return [null, null];
 
-  if (!id) return;
+
+  });
 
   const update = await Community.updateOne({ _id: id }, patch).exec();
 
